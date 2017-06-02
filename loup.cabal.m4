@@ -34,6 +34,9 @@ library
                      , amazonka-core
                      , amazonka-swf
                      , base == 4.8.*
+                     , lifted-async
+                     , monad-control
+                     , preamble
 
 executable loup-actor
   hs-source-dirs:      main
@@ -47,15 +50,6 @@ executable loup-actor
 executable loup-decider
   hs-source-dirs:      main
   main-is:             decider.hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
-  build-depends:       base
-                     , loup
-                     , optparse-generic
-  default-language:    Haskell2010
-
-executable loup-counter
-  hs-source-dirs:      main
-  main-is:             counter.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:       base
                      , loup

@@ -12,7 +12,7 @@ import Options.Generic
 -- Program arguments.
 --
 data Args = Args
-  { domain :: FilePath
+  { domain :: Text
     -- ^ Configuration file.
   , plan   :: FilePath
     -- ^ Plan file to decide on.
@@ -26,5 +26,5 @@ main :: IO ()
 main = do
   args <- getRecord "Decider"
   decideMain
-    (config args)
+    (domain args)
     (plan args)

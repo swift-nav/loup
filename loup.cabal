@@ -19,14 +19,14 @@ source-repository head
 library
   exposed-modules:     Network.AWS.Loup
   other-modules:       Network.AWS.Loup.Act
-                     , Network.AWS.Loup.Ctx
+--                     , Network.AWS.Loup.Ctx
                      , Network.AWS.Loup.Decide
                      , Network.AWS.Loup.Prelude
-                     , Network.AWS.Loup.SWF
-                     , Network.AWS.Loup.Types
-                     , Network.AWS.Loup.Types.Ctx
-                     , Network.AWS.Loup.Types.Product
-                     , Network.AWS.Loup.Types.Sum
+--                     , Network.AWS.Loup.SWF
+--                     , Network.AWS.Loup.Types
+--                     , Network.AWS.Loup.Types.Ctx
+--                     , Network.AWS.Loup.Types.Product
+--                     , Network.AWS.Loup.Types.Sum
   default-language:    Haskell2010
   hs-source-dirs:      src
   ghc-options:         -Wall
@@ -34,6 +34,9 @@ library
                      , amazonka-core
                      , amazonka-swf
                      , base == 4.8.*
+                     , lifted-async
+                     , monad-control
+                     , preamble
 
 executable loup-actor
   hs-source-dirs:      main
@@ -47,15 +50,6 @@ executable loup-actor
 executable loup-decider
   hs-source-dirs:      main
   main-is:             decider.hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
-  build-depends:       base
-                     , loup
-                     , optparse-generic
-  default-language:    Haskell2010
-
-executable loup-counter
-  hs-source-dirs:      main
-  main-is:             counter.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:       base
                      , loup
