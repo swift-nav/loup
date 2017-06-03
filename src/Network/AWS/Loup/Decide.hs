@@ -19,4 +19,7 @@ decide = undefined
 -- | Run decider from main with configuration.
 --
 decideMain :: MonadControl m => Text -> FilePath -> m ()
-decideMain = undefined
+decideMain domain pf =
+  runResourceT $ runCtx $ runStatsCtx $ do
+    plans <- readYaml pf
+    undefined
