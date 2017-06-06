@@ -9,17 +9,20 @@ module Network.AWS.Loup.Decide
   , decideMain
   ) where
 
+import Data.Yaml
+import Network.AWS.Loup.Ctx
 import Network.AWS.Loup.Prelude
+import Network.AWS.Loup.Types
 
 -- | Decider logic - poll for decisions, make decisions.
 --
-decide :: MonadControl m => Text -> FilePath -> m ()
-decide = undefined
+decide :: MonadAmazonCtx c m => Text -> [Plan] -> m ()
+decide _domain _plans = undefined
 
 -- | Run decider from main with configuration.
 --
 decideMain :: MonadControl m => Text -> FilePath -> m ()
 decideMain domain pf =
-  runResourceT $ runCtx $ runStatsCtx $ do
-    plans <- readYaml pf
-    undefined
+  runResourceT $ runCtx $ runStatsCtx $ runAmazonCtx $ do
+    plans <- liftIO $ join . maybeToList <$> decodeFile pf
+    decide domain plans
