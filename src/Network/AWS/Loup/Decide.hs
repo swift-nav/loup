@@ -12,6 +12,8 @@ module Network.AWS.Loup.Decide
 import Control.Monad.Trans.AWS
 import Data.Conduit
 import Data.Conduit.List        hiding (foldM)
+import Data.UUID
+import Data.UUID.V4
 import Data.Yaml
 import Network.AWS.Loup.Ctx
 import Network.AWS.Loup.Prelude
@@ -31,56 +33,91 @@ completeDecision :: MonadAmazonCtx c m => Text -> [Decision] -> m ()
 completeDecision token decisions =
   void $ send $ set rdtcDecisions decisions $ respondDecisionTaskCompleted token
 
+scheduleActivity :: UUID -> ActivityType -> TaskList -> Maybe Text -> Decision
+scheduleActivity uid activity list input = do
+  let satda = scheduleActivityTaskDecisionAttributes activity (toText uid)
+        & satdaTaskList .~ return list
+        & satdaInput    .~ input
+  set dScheduleActivityTaskDecisionAttributes (return satda) $ decision ScheduleActivityTask
+
+completeActivity :: Decision
+completeActivity = do
+  let cweda = completeWorkflowExecutionDecisionAttributes
+  set dCompleteWorkflowExecutionDecisionAttributes (return cweda) $ decision CompleteWorkflowExecution
+
+cancelActivity :: Decision
+cancelActivity = do
+  let cweda = cancelWorkflowExecutionDecisionAttributes
+  set dCancelWorkflowExecutionDecisionAttributes (return cweda) $ decision CancelWorkflowExecution
+
+requestCancel :: UUID -> Decision
+requestCancel uid = do
+  let rcatda = requestCancelActivityTaskDecisionAttributes (toText uid)
+  set dRequestCancelActivityTaskDecisionAttributes (return rcatda) $ decision RequestCancelActivityTask
+
 foldEvents :: MonadDecisionCtx c m => a -> (a -> HistoryEvent -> m a) -> m a
 foldEvents base action = do
   events <- view dcEvents
   foldM action base events
 
+findEvent :: MonadDecisionCtx c m => EventType -> m (Maybe HistoryEvent)
+findEvent eventType = do
+  let f ds e = return $ bool ds (Just e) $ e ^. heEventType == eventType
+  foldEvents Nothing f
+
 begin :: MonadDecisionCtx c m => HistoryEvent -> m [Decision]
-begin _event = do
+begin event = do
   traceInfo "begin" mempty
-  undefined
+  uid  <- liftIO nextRandom
+  task <- view pActivityTask <$> view dcPlan
+  let input = join $ view weseaInput <$> event ^. heWorkflowExecutionStartedEventAttributes
+  return [ scheduleActivity uid (task ^. tActivityType) (task ^. tTaskList) input ]
 
-completed :: MonadDecisionCtx c m => HistoryEvent -> m [Decision]
-completed _event = do
-  traceInfo "completed" mempty
-  undefined
-
-timedout :: MonadDecisionCtx c m => HistoryEvent -> m [Decision]
-timedout _event = do
-  traceInfo "timedout" mempty
-  undefined
-
-cancel :: MonadDecisionCtx c m => HistoryEvent -> m [Decision]
-cancel _event = do
+cancel :: MonadDecisionCtx c m => m [Decision]
+cancel = do
   traceInfo "cancel" mempty
-  undefined
+  event <- findEvent ActivityTaskScheduled
+  let uid = join $ fromText . view atseaActivityId <$> join (view heActivityTaskScheduledEventAttributes <$> event)
+  return [ maybe cancelActivity requestCancel uid ]
 
-canceled :: MonadDecisionCtx c m => HistoryEvent -> m [Decision]
-canceled _event = do
+completed :: MonadDecisionCtx c m => m [Decision]
+completed = do
+  traceInfo "completed" mempty
+  return [ completeActivity ]
+
+canceled :: MonadDecisionCtx c m => m [Decision]
+canceled = do
   traceInfo "canceled" mempty
-  undefined
+  return [ completeActivity ]
 
-failed :: MonadDecisionCtx c m => HistoryEvent -> m [Decision]
-failed _event = do
+timedout :: MonadDecisionCtx c m => m [Decision]
+timedout = do
+  traceInfo "timedout" mempty
+  uid   <- liftIO nextRandom
+  task  <- view pActivityTask <$> view dcPlan
+  event <- findEvent WorkflowExecutionStarted
+  let input = join $ view weseaInput <$> join (view heWorkflowExecutionStartedEventAttributes <$> event)
+  return [ scheduleActivity uid (task ^. tActivityType) (task ^. tTaskList) input ]
+
+failed :: MonadDecisionCtx c m => m [Decision]
+failed = do
   traceInfo "failed" mempty
-  undefined
+  return [ cancelActivity ]
 
 -- | Schedule decision based on history events.
 --
 schedule :: MonadDecisionCtx c m => m [Decision]
 schedule = do
   traceInfo "schedule" mempty
+  let f ds e
+        | e ^. heEventType == WorkflowExecutionStarted         = begin e
+        | e ^. heEventType == WorkflowExecutionCancelRequested = cancel
+        | e ^. heEventType == ActivityTaskCompleted            = completed
+        | e ^. heEventType == ActivityTaskCanceled             = canceled
+        | e ^. heEventType == ActivityTaskTimedOut             = timedout
+        | e ^. heEventType == RequestCancelActivityTaskFailed  = failed
+        | otherwise                                            = return ds
   foldEvents mempty f
-  where
-    f ds e
-      | e ^. heEventType == WorkflowExecutionStarted         = begin e
-      | e ^. heEventType == ActivityTaskCompleted            = completed e
-      | e ^. heEventType == ActivityTaskTimedOut             = timedout e
-      | e ^. heEventType == WorkflowExecutionCancelRequested = cancel e
-      | e ^. heEventType == ActivityTaskCanceled             = canceled e
-      | e ^. heEventType == RequestCancelActivityTaskFailed  = failed e
-      | otherwise                                            = return ds
 
 -- | Decider logic - poll for decisions, make decisions.
 --

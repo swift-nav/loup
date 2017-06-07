@@ -39,6 +39,7 @@ library
                      , monad-control
                      , preamble
                      , turtle
+                     , uuid
                      , yaml
 
 executable loup-actor

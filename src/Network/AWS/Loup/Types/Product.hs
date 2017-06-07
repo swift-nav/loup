@@ -32,7 +32,7 @@ $(deriveJSON spinalOptions ''Task)
 data Plan = Plan
   { _pDecisionTask :: Task
     -- ^ Decision task.
-  , _pActiviyTask  :: Task
+  , _pActivityTask :: Task
     -- ^ Activity task.
   } deriving (Show, Eq)
 
