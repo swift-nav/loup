@@ -1,0 +1,12 @@
+- decision-task:
+    task-list:
+      name: workflow
+    activity-type:
+      name: workflow
+      version: '1.1'
+  activity-task:
+    task-list:
+      name: activity
+    activity-type:
+      name: activity
+      version: '1.1'

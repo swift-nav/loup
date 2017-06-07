@@ -54,7 +54,7 @@ runActivity command input = do
   traceInfo "run" [ "command" .= command, "input" .= input]
   intempdir $ do
     liftIO $ maybe_ input $ writeTextFile "input.json"
-    stdout $ flip inshell mempty $ "." -/- command
+    stdout $ inshell command mempty
 
 -- | Actor logic - poll for work, download artifacts, run command, upload artifacts.
 --

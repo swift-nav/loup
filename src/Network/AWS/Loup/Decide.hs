@@ -55,15 +55,12 @@ requestCancel uid = do
   let rcatda = requestCancelActivityTaskDecisionAttributes (toText uid)
   set dRequestCancelActivityTaskDecisionAttributes (return rcatda) $ decision RequestCancelActivityTask
 
-foldEvents :: MonadDecisionCtx c m => a -> (a -> HistoryEvent -> m a) -> m a
-foldEvents base action = do
-  events <- view dcEvents
-  foldM action base events
-
 findEvent :: MonadDecisionCtx c m => EventType -> m (Maybe HistoryEvent)
 findEvent eventType = do
-  let f ds e = return $ bool ds (Just e) $ e ^. heEventType == eventType
-  foldEvents Nothing f
+  let f []     = return Nothing
+      f (e:es) = bool (f es) (return $ Just e) $ e ^. heEventType == eventType
+  events <- view dcEvents
+  f events
 
 begin :: MonadDecisionCtx c m => HistoryEvent -> m [Decision]
 begin event = do
@@ -109,15 +106,17 @@ failed = do
 schedule :: MonadDecisionCtx c m => m [Decision]
 schedule = do
   traceInfo "schedule" mempty
-  let f ds e
+  let f []                                                     = return mempty
+      f (e:es)
         | e ^. heEventType == WorkflowExecutionStarted         = begin e
         | e ^. heEventType == WorkflowExecutionCancelRequested = cancel
         | e ^. heEventType == ActivityTaskCompleted            = completed
         | e ^. heEventType == ActivityTaskCanceled             = canceled
         | e ^. heEventType == ActivityTaskTimedOut             = timedout
         | e ^. heEventType == RequestCancelActivityTaskFailed  = failed
-        | otherwise                                            = return ds
-  foldEvents mempty f
+        | otherwise                                            = f es
+  events <- view dcEvents
+  f events
 
 -- | Decider logic - poll for decisions, make decisions.
 --
