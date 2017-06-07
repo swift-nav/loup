@@ -12,11 +12,13 @@ import Options.Generic
 -- Program arguments.
 --
 data Args = Args
-  { domain  :: Text
+  { domain   :: Text
     -- ^ Workflow domain.
-  , queue   :: Text
+  , queue    :: Text
     -- ^ Queue to listen to act on.
-  , command :: Text
+  , interval :: Int
+    -- ^ Interval to heartbeat at.
+  , command  :: Text
     -- ^ Command to run.
   } deriving (Show, Generic)
 
@@ -30,4 +32,5 @@ main = do
   actMain
     (domain args)
     (queue args)
+    (interval args)
     (command args)

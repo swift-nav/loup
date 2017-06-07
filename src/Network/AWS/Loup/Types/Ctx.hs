@@ -51,7 +51,7 @@ data DecisionCtx = DecisionCtx
     -- ^ Parent context.
   , _dcPlan      :: Plan
     -- ^ Decision plan.
-  , _dcEvents   :: [HistoryEvent]
+  , _dcEvents    :: [HistoryEvent]
     -- ^ History events.
   }
 

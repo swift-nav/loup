@@ -11,7 +11,7 @@ module Network.AWS.Loup.Decide
 
 import Control.Monad.Trans.AWS
 import Data.Conduit
-import Data.Conduit.List hiding (foldM)
+import Data.Conduit.List        hiding (foldM)
 import Data.Yaml
 import Network.AWS.Loup.Ctx
 import Network.AWS.Loup.Prelude
@@ -37,27 +37,40 @@ foldEvents base action = do
   foldM action base events
 
 begin :: MonadDecisionCtx c m => HistoryEvent -> m [Decision]
-begin _event = undefined
+begin _event = do
+  traceInfo "begin" mempty
+  undefined
 
 completed :: MonadDecisionCtx c m => HistoryEvent -> m [Decision]
-completed _event = undefined
+completed _event = do
+  traceInfo "completed" mempty
+  undefined
 
 timedout :: MonadDecisionCtx c m => HistoryEvent -> m [Decision]
-timedout _event = undefined
+timedout _event = do
+  traceInfo "timedout" mempty
+  undefined
 
 cancel :: MonadDecisionCtx c m => HistoryEvent -> m [Decision]
-cancel _event = undefined
+cancel _event = do
+  traceInfo "cancel" mempty
+  undefined
 
 canceled :: MonadDecisionCtx c m => HistoryEvent -> m [Decision]
-canceled _event = undefined
+canceled _event = do
+  traceInfo "canceled" mempty
+  undefined
 
 failed :: MonadDecisionCtx c m => HistoryEvent -> m [Decision]
-failed _event = undefined
+failed _event = do
+  traceInfo "failed" mempty
+  undefined
 
 -- | Schedule decision based on history events.
 --
 schedule :: MonadDecisionCtx c m => m [Decision]
-schedule =
+schedule = do
+  traceInfo "schedule" mempty
   foldEvents mempty f
   where
     f ds e
@@ -72,12 +85,16 @@ schedule =
 -- | Decider logic - poll for decisions, make decisions.
 --
 decide :: MonadAmazonCtx c m => Text -> Plan -> m ()
-decide domain plan = do
-  (token, events) <- pollDecision domain (plan ^. pDecisionTask ^. tTaskList)
-  maybe_ token $ \token' ->
-    runDecisionCtx plan events $ do
-      decisions <- schedule
-      completeDecision token' decisions
+decide domain plan =
+  preAmazonCtx [ "label" .= LabelDecide, "domain" .= domain, "plan" .= plan ] $ do
+    traceInfo "poll" mempty
+    (token, events) <- pollDecision domain (plan ^. pDecisionTask ^. tTaskList)
+    maybe_ token $ \token' -> do
+      traceInfo "start" mempty
+      runDecisionCtx plan events $ do
+        decisions <- schedule
+        completeDecision token' decisions
+      traceInfo "finish" mempty
 
 -- | Run decider from main with configuration.
 --

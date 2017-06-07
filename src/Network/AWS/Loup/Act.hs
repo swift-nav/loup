@@ -30,11 +30,6 @@ completeActivity :: MonadAmazonCtx c m => Text -> m ()
 completeActivity token =
   void $ send $ respondActivityTaskCompleted token
 
--- | Interval between hearbeats
---
-heartbeatInterval :: Int
-heartbeatInterval = 5 * 1000000
-
 -- | Hearbeat.
 --
 heartbeat :: MonadAmazonCtx c m => Text -> m ()
@@ -55,23 +50,28 @@ intempdir action =
 -- | Run command with input.
 --
 runActivity :: MonadCtx c m => Text -> Maybe Text -> m ()
-runActivity command input =
+runActivity command input = do
+  traceInfo "run" [ "command" .= command, "input" .= input]
   intempdir $ do
     liftIO $ maybe_ input $ writeTextFile "input.json"
     stdout $ flip inshell mempty $ "." -/- command
 
 -- | Actor logic - poll for work, download artifacts, run command, upload artifacts.
 --
-act :: MonadAmazonCtx c m => Text -> Text -> Text -> m ()
-act domain queue command = do
-  (token, input) <- pollActivity domain (taskList queue)
-  maybe_ token $ \token' -> do
-    race_ (runEvery heartbeatInterval $ heartbeat token') (runActivity command input)
-    completeActivity token'
+act :: MonadAmazonCtx c m => Text -> Text -> Int -> Text -> m ()
+act domain queue interval command =
+  preAmazonCtx [ "label" .= LabelAct, "domain" .= domain, "queue" .= queue ] $ do
+    traceInfo "poll" mempty
+    (token, input) <- pollActivity domain (taskList queue)
+    maybe_ token $ \token' -> do
+      traceInfo "start" mempty
+      race_ (runEvery (interval * 1000000) $ heartbeat token') (runActivity command input)
+      completeActivity token'
+      traceInfo "finish" mempty
 
 -- | Run actor from main with configuration.
 --
-actMain :: MonadControl m => Text -> Text -> Text -> m ()
-actMain domain queue command =
+actMain :: MonadControl m => Text -> Text -> Int -> Text -> m ()
+actMain domain queue interval command =
   runResourceT $ runCtx $ runStatsCtx $ runAmazonCtx $
-    forever $ act domain queue command
+    forever $ act domain queue interval command

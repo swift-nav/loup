@@ -6,3 +6,4 @@ module Network.AWS.Loup.Types
 
 import Network.AWS.Loup.Types.Ctx     as Exports
 import Network.AWS.Loup.Types.Product as Exports
+import Network.AWS.Loup.Types.Sum     as Exports
