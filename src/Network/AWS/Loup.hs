@@ -7,3 +7,4 @@ module Network.AWS.Loup
 import Network.AWS.Loup.Act     as Exports
 import Network.AWS.Loup.Decide  as Exports
 import Network.AWS.Loup.Prelude as Exports
+import Network.AWS.Loup.Types   as Exports
