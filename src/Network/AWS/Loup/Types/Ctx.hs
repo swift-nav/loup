@@ -11,6 +11,8 @@ module Network.AWS.Loup.Types.Ctx
 
 import Control.Monad.Trans.AWS
 import Network.AWS.Loup.Prelude
+import Network.AWS.Loup.Types.Product
+import Network.AWS.SWF
 
 -- | AmazonCtx
 --
@@ -38,4 +40,36 @@ type MonadAmazonCtx c m =
   ( MonadStatsCtx c m
   , HasAmazonCtx c
   , AWSConstraint c m
+  )
+
+-- | DecisionsCtx
+--
+-- Decision context.
+--
+data DecisionCtx = DecisionCtx
+  { _dcAmazonCtx :: AmazonCtx
+    -- ^ Parent context.
+  , _dcPlan      :: Plan
+    -- ^ Decision plan.
+  , _dcEvents   :: [HistoryEvent]
+    -- ^ History events.
+  }
+
+$(makeClassyConstraints ''DecisionCtx [''HasAmazonCtx])
+
+instance HasAmazonCtx DecisionCtx where
+  amazonCtx = dcAmazonCtx
+
+instance HasStatsCtx DecisionCtx where
+  statsCtx = amazonCtx . statsCtx
+
+instance HasCtx DecisionCtx where
+  ctx = statsCtx . ctx
+
+instance HasEnv DecisionCtx where
+  environment = amazonCtx . environment
+
+type MonadDecisionCtx c m =
+  ( MonadStatsCtx c m
+  , HasDecisionCtx c
   )

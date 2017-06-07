@@ -16,7 +16,7 @@ data Args = Args
     -- ^ Workflow domain.
   , queue   :: Text
     -- ^ Queue to listen to act on.
-  , command :: String
+  , command :: Text
     -- ^ Command to run.
   } deriving (Show, Generic)
 

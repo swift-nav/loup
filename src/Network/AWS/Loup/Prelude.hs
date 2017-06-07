@@ -7,8 +7,10 @@
 module Network.AWS.Loup.Prelude
   ( module Exports
   , runConcurrent
+  , runEvery
   ) where
 
+import Control.Concurrent
 import Control.Concurrent.Async.Lifted
 import Control.Monad.Trans.Control
 import Preamble                        as Exports
@@ -17,3 +19,11 @@ import Preamble                        as Exports
 --
 runConcurrent :: MonadBaseControl IO m => [m a] -> m ()
 runConcurrent = void . runConcurrently . sequenceA . map Concurrently
+
+-- | Run an action every interval.
+--
+runEvery :: MonadIO m => Int -> m a -> m b
+runEvery ms action =
+  forever $ do
+    liftIO $ threadDelay ms
+    action

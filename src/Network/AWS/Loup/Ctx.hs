@@ -6,11 +6,13 @@
 --
 module Network.AWS.Loup.Ctx
   ( runAmazonCtx
+  , runDecisionCtx
   ) where
 
 import Control.Monad.Trans.AWS
 import Network.AWS.Loup.Prelude
 import Network.AWS.Loup.Types
+import Network.AWS.SWF
 
 -- | Catcher for exceptions, traces and rethrows.
 --
@@ -43,3 +45,10 @@ runAmazonCtx action = do
   c <- view statsCtx
   e <- newEnv Oregon $ FromEnv "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" mempty
   runTopTransT (AmazonCtx c e) action
+
+-- | Run decision context.
+--
+runDecisionCtx :: MonadAmazonCtx c m => Plan -> [HistoryEvent] -> TransT DecisionCtx m a -> m a
+runDecisionCtx plan events action = do
+  c <- view amazonCtx
+  runBotTransT (DecisionCtx c plan events) action
