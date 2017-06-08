@@ -2,7 +2,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 
--- | Run decider.
+-- | Run converger.
 --
 import Network.AWS.Loup
 import Options.Generic
@@ -14,17 +14,17 @@ import Options.Generic
 data Args = Args
   { domain :: Text
     -- ^ Configuration file.
-  , plan   :: FilePath
-    -- ^ Plan file to decide on.
+  , pool   :: FilePath
+    -- ^ Pool file to converge on.
   } deriving (Show, Generic)
 
 instance ParseRecord Args
 
--- | Run decider.
+-- | Run converger.
 --
 main :: IO ()
 main = do
-  args <- getRecord "Decider"
-  decideMain
+  args <- getRecord "Converger"
+  convergeMain
     (domain args)
-    (plan args)
+    (pool args)

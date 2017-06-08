@@ -19,10 +19,12 @@ source-repository head
 library
   exposed-modules:     Network.AWS.Loup
   other-modules:       Network.AWS.Loup.Act
+                     , Network.AWS.Loup.Converge
                      , Network.AWS.Loup.Ctx
                      , Network.AWS.Loup.Decide
                      , Network.AWS.Loup.Prelude
                      , Network.AWS.Loup.Types
+                     , Network.AWS.Loup.Types.Alias
                      , Network.AWS.Loup.Types.Ctx
                      , Network.AWS.Loup.Types.Product
                      , Network.AWS.Loup.Types.Sum
@@ -53,6 +55,15 @@ executable loup-actor
 executable loup-decider
   hs-source-dirs:      main
   main-is:             decider.hs
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
+  build-depends:       base
+                     , loup
+                     , optparse-generic
+  default-language:    Haskell2010
+
+executable loup-converger
+  hs-source-dirs:      main
+  main-is:             converger.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
   build-depends:       base
                      , loup

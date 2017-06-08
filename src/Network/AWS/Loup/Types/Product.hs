@@ -14,6 +14,7 @@ module Network.AWS.Loup.Types.Product
 
 import Data.Aeson.TH
 import Network.AWS.Loup.Prelude
+import Network.AWS.Loup.Types.Alias
 import Network.AWS.SWF
 
 -- | Task
@@ -43,3 +44,17 @@ data Plan = Plan
 
 $(makeLenses ''Plan)
 $(deriveJSON spinalOptions ''Plan)
+
+-- | Pool
+--
+-- Pool of workers associated with a task.
+--
+data Pool = Pool
+  { _wTask    :: Task
+    -- ^ Workers task.
+  , _wWorkers :: InputMap
+    -- ^ Workers input map.
+  } deriving (Show, Eq)
+
+$(makeLenses ''Pool)
+$(deriveJSON spinalOptions ''Pool)

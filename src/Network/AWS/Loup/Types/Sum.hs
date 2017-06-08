@@ -15,6 +15,7 @@ import Network.AWS.Loup.Prelude
 data LabelType
   = LabelAct
   | LabelDecide
+  | LabelConverge
   deriving (Show, Eq)
 
 $(deriveJSON spinalOptions ''LabelType)
