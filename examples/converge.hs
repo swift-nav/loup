@@ -27,13 +27,25 @@ $(deriveJSON spinalOptions ''Workers)
 
 -- | aws command.
 --
-aws :: MonadIO m => Text -> [Text] -> m ()
-aws cmd args = void $ procStrict "aws" (cmd : args) mempty
+aws :: MonadIO m => Text -> [Text] -> m Text
+aws cmd args = snd <$> procStrict "aws" (cmd : args) mempty
 
 -- | swf command.
 --
-swf :: MonadIO m => Text -> [Text] -> m ()
-swf cmd args = aws "swf" (cmd : args)
+swf :: MonadIO m => Text -> [Text] -> m Text
+swf cmd args = aws "swf" (cmd : "--output" : "json" : args)
+
+-- | jq command.
+--
+jq :: MonadIO m => [Text] -> Shell Text -> m Text
+jq args i = head . lines <$> process "jq" ("-rc" : args) i
+
+open domain workers =
+  swf "list-open-workflow-executions"
+    [ "--domain"            , domain
+    , "--type-filter"       , intercalate "," [ "name=" <> workers ^. wActivityType ^. atName, "version=" <> workers ^. wActivityType ^. atVersion ]
+    , "--start-time-filter" , "oldestDate=1970-01-01"
+    ]
 
 -- | Arguments to pass
 --
@@ -49,4 +61,6 @@ main = do
   workers          <- liftIO $ join . maybeToList <$> decodeFile (textToString wf)
   print (plans :: [Plan])
   print (workers :: [Workers])
+  yo <- open domain $ head workers
+  print yo
 
