@@ -5,6 +5,11 @@
 --
 module Network.AWS.Loup.Types.Product
   ( module Network.AWS.Loup.Types.Product
+  , ActivityType
+  , atName
+  , atVersion
+  , TaskList
+  , tlName
   ) where
 
 import Data.Aeson.TH

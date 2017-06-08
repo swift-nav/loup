@@ -1,0 +1,16 @@
+- activity-type:
+    name: workflow
+    version: '1.1'
+  worker-map:
+    aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:
+      input:
+        a: foo
+    bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb:
+      input:
+        a: bar
+        b: wut
+    cccccccc-cccc-cccc-cccc-cccccccccccd:
+      input:
+        a: baz
+        c:
+          z: dog
