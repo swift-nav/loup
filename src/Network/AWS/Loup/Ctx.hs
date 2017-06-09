@@ -10,6 +10,7 @@ module Network.AWS.Loup.Ctx
   , runDecisionCtx
   ) where
 
+import Control.Exception.Lifted
 import Control.Monad.Trans.AWS
 import Data.Aeson
 import Network.AWS.Loup.Prelude
@@ -23,6 +24,17 @@ botSomeExceptionCatch ex = do
   traceError "exception" [ "error" .= displayException ex ]
   throwIO ex
 
+-- | Catch TransportError's.
+--
+botErrorCatch :: MonadCtx c m => Error -> m a
+botErrorCatch ex = do
+  case ex of
+    TransportError _ ->
+      return ()
+    _ ->
+      traceError "exception" [ "error" .= displayException ex ]
+  throwIO ex
+
 -- | Catcher for exceptions, emits stats and rethrows.
 --
 topSomeExceptionCatch :: MonadStatsCtx c m => SomeException -> m a
@@ -33,7 +45,7 @@ topSomeExceptionCatch ex = do
 -- | Run bottom TransT.
 --
 runBotTransT :: (MonadMain m, HasCtx c) => c -> TransT c m a -> m a
-runBotTransT c action = runTransT c $ catch action botSomeExceptionCatch
+runBotTransT c action = runTransT c $ catches action [ Handler botErrorCatch, Handler botSomeExceptionCatch ]
 
 -- | Run top TransT.
 --
