@@ -1,0 +1,17 @@
+- task:
+    task-list:
+      name: workflow
+    activity-type:
+      name: workflow
+      version: '1.2'
+  workers:
+    aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:
+      a: foo
+    bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb:
+      a: bar
+      b: wut
+    cccccccc-cccc-cccc-cccc-cccccccccccd:
+      a: baz
+      c:
+        z: dog
+    dddddddd-dddd-dddd-dddd-dddddddddddd:

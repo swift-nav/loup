@@ -10,8 +10,6 @@ module Network.AWS.Loup.Decide
   ) where
 
 import Control.Monad.Trans.AWS
-import Data.Conduit
-import Data.Conduit.List        hiding (foldM)
 import Data.UUID
 import Data.UUID.V4
 import Data.Yaml
@@ -24,37 +22,52 @@ import Network.AWS.SWF
 --
 pollDecision :: MonadAmazonCtx c m => Text -> TaskList -> m (Maybe Text, [HistoryEvent])
 pollDecision domain list = do
-  pfdtrs <- paginate (pollForDecisionTask domain list) $$ consume
+  pfdtrs <- pages $ pollForDecisionTask domain list
   return (join $ headMay $ view pfdtrsTaskToken <$> pfdtrs, reverse $ join $ view pfdtrsEvents <$> pfdtrs)
 
 -- | Successful decision completion.
 --
 completeDecision :: MonadAmazonCtx c m => Text -> [Decision] -> m ()
 completeDecision token decisions =
-  void $ send $ set rdtcDecisions decisions $ respondDecisionTaskCompleted token
+  void $ send $ respondDecisionTaskCompleted token
+    & rdtcDecisions .~ decisions
 
+-- | Schedule activity decision.
+--
 scheduleActivity :: UUID -> ActivityType -> TaskList -> Maybe Text -> Decision
 scheduleActivity uid activity list input = do
   let satda = scheduleActivityTaskDecisionAttributes activity (toText uid)
         & satdaTaskList .~ return list
         & satdaInput    .~ input
-  set dScheduleActivityTaskDecisionAttributes (return satda) $ decision ScheduleActivityTask
+  decision ScheduleActivityTask
+    & dScheduleActivityTaskDecisionAttributes .~ return satda
 
+-- | Complete activity decision.
+--
 completeActivity :: Decision
 completeActivity = do
   let cweda = completeWorkflowExecutionDecisionAttributes
-  set dCompleteWorkflowExecutionDecisionAttributes (return cweda) $ decision CompleteWorkflowExecution
+  decision CompleteWorkflowExecution
+    & dCompleteWorkflowExecutionDecisionAttributes .~ return cweda
 
+-- | Cancel activity decision.
+--
 cancelActivity :: Decision
 cancelActivity = do
   let cweda = cancelWorkflowExecutionDecisionAttributes
-  set dCancelWorkflowExecutionDecisionAttributes (return cweda) $ decision CancelWorkflowExecution
+  decision CancelWorkflowExecution
+    & dCancelWorkflowExecutionDecisionAttributes .~ return cweda
 
+-- | Request to cancel activity decision.
+--
 requestCancel :: UUID -> Decision
 requestCancel uid = do
   let rcatda = requestCancelActivityTaskDecisionAttributes (toText uid)
-  set dRequestCancelActivityTaskDecisionAttributes (return rcatda) $ decision RequestCancelActivityTask
+  decision RequestCancelActivityTask
+    & dRequestCancelActivityTaskDecisionAttributes .~ return rcatda
 
+-- | Find a matching event type.
+--
 findEvent :: MonadDecisionCtx c m => EventType -> m (Maybe HistoryEvent)
 findEvent eventType = do
   let f []     = return Nothing
@@ -62,6 +75,8 @@ findEvent eventType = do
   events <- view dcEvents
   f events
 
+-- | Begin workflow step.
+--
 begin :: MonadDecisionCtx c m => HistoryEvent -> m [Decision]
 begin event = do
   traceInfo "begin" mempty
@@ -70,6 +85,8 @@ begin event = do
   let input = join $ view weseaInput <$> event ^. heWorkflowExecutionStartedEventAttributes
   return [ scheduleActivity uid (task ^. tActivityType) (task ^. tTaskList) input ]
 
+-- | Cancel workflow step.
+--
 cancel :: MonadDecisionCtx c m => m [Decision]
 cancel = do
   traceInfo "cancel" mempty
@@ -77,16 +94,22 @@ cancel = do
   let uid = join $ fromText . view atseaActivityId <$> join (view heActivityTaskScheduledEventAttributes <$> event)
   return [ maybe cancelActivity requestCancel uid ]
 
+-- | Completed workflow step.
+--
 completed :: MonadDecisionCtx c m => m [Decision]
 completed = do
   traceInfo "completed" mempty
   return [ completeActivity ]
 
+-- | Canceled workflow step.
+--
 canceled :: MonadDecisionCtx c m => m [Decision]
 canceled = do
   traceInfo "canceled" mempty
   return [ completeActivity ]
 
+-- | Timed out workflow step.
+--
 timedout :: MonadDecisionCtx c m => m [Decision]
 timedout = do
   traceInfo "timedout" mempty
@@ -96,6 +119,8 @@ timedout = do
   let input = join $ view weseaInput <$> join (view heWorkflowExecutionStartedEventAttributes <$> event)
   return [ scheduleActivity uid (task ^. tActivityType) (task ^. tTaskList) input ]
 
+-- | Failed workflow step.
+--
 failed :: MonadDecisionCtx c m => m [Decision]
 failed = do
   traceInfo "failed" mempty

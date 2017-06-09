@@ -11,4 +11,4 @@ import Network.AWS.Loup.Prelude
 
 -- | InputMap
 --
-type InputMap = HashMap Text Value
+type InputMap = HashMap Text (Maybe Value)

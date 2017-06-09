@@ -50,9 +50,9 @@ $(deriveJSON spinalOptions ''Plan)
 -- Pool of workers associated with a task.
 --
 data Pool = Pool
-  { _wTask    :: Task
+  { _pTask    :: Task
     -- ^ Workers task.
-  , _wWorkers :: InputMap
+  , _pWorkers :: InputMap
     -- ^ Workers input map.
   } deriving (Show, Eq)
 

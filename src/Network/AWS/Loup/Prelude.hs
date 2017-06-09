@@ -6,24 +6,32 @@
 --
 module Network.AWS.Loup.Prelude
   ( module Exports
+  , encode'
+  , pages
   , runConcurrent
-  , runEvery
   ) where
 
-import Control.Concurrent
 import Control.Concurrent.Async.Lifted
+import Control.Monad.Trans.AWS
 import Control.Monad.Trans.Control
+import Data.Aeson
+import Data.ByteString.Lazy            hiding (map)
+import Data.Conduit
+import Data.Conduit.List               hiding (map)
 import Preamble                        as Exports
+
+-- | Encode JSON to Text.
+--
+encode' :: ToJSON a => a -> Text
+encode' = decodeUtf8 . toStrict . encode
+
+-- | Paginate all.
+--
+pages :: (AWSConstraint c m, AWSPager a) => a -> m [Rs a]
+pages a = paginate a $$ consume
 
 -- | Run a list of actions concurrently.
 --
 runConcurrent :: MonadBaseControl IO m => [m a] -> m ()
 runConcurrent = void . runConcurrently . sequenceA . map Concurrently
 
--- | Run an action every interval.
---
-runEvery :: MonadIO m => Int -> m a -> m b
-runEvery ms action =
-  forever $ do
-    liftIO $ threadDelay ms
-    action

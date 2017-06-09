@@ -35,10 +35,12 @@ library
                      , amazonka
                      , amazonka-swf
                      , base == 4.8.*
+                     , bytestring
                      , conduit
                      , lifted-async
                      , monad-control
                      , preamble
+                     , time
                      , turtle
                      , uuid
                      , yaml

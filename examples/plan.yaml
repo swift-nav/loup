@@ -3,10 +3,10 @@
       name: workflow
     activity-type:
       name: workflow
-      version: '1.1'
+      version: '1.2'
   activity-task:
     task-list:
       name: activity
     activity-type:
       name: activity
-      version: '1.1'
+      version: '1.2'

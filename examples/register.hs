@@ -28,6 +28,7 @@ decision domain task =
     , "--workflow-version"                         , task ^. tActivityType ^. atVersion
     , "--default-execution-start-to-close-timeout" , "31536000"
     , "--default-task-start-to-close-timeout"      , "15"
+    , "--default-child-policy"                     , "TERMINATE"
     ]
 
 -- | Register activity task.
