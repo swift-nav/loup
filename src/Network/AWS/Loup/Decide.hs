@@ -101,29 +101,22 @@ completed = do
   traceInfo "completed" mempty
   return [ completeActivity ]
 
--- | Canceled workflow step.
+-- | Restart workflow step.
 --
-canceled :: MonadDecisionCtx c m => m [Decision]
-canceled = do
-  traceInfo "canceled" mempty
-  return [ completeActivity ]
-
--- | Timed out workflow step.
---
-timedout :: MonadDecisionCtx c m => m [Decision]
-timedout = do
-  traceInfo "timedout" mempty
+restart :: MonadDecisionCtx c m => m [Decision]
+restart = do
+  traceInfo "restart" mempty
   uid   <- liftIO nextRandom
   task  <- view pActivityTask <$> view dcPlan
   event <- findEvent WorkflowExecutionStarted
   let input = join $ view weseaInput <$> join (view heWorkflowExecutionStartedEventAttributes <$> event)
   return [ scheduleActivity uid (task ^. tActivityType) (task ^. tTaskList) input ]
 
--- | Failed workflow step.
+-- | Cancel failed workflow step.
 --
-failed :: MonadDecisionCtx c m => m [Decision]
-failed = do
-  traceInfo "failed" mempty
+canceled :: MonadDecisionCtx c m => m [Decision]
+canceled = do
+  traceInfo "canceled" mempty
   return [ cancelActivity ]
 
 -- | Schedule decision based on history events.
@@ -136,9 +129,10 @@ schedule = do
         | e ^. heEventType == WorkflowExecutionStarted         = begin e
         | e ^. heEventType == WorkflowExecutionCancelRequested = cancel
         | e ^. heEventType == ActivityTaskCompleted            = completed
-        | e ^. heEventType == ActivityTaskCanceled             = canceled
-        | e ^. heEventType == ActivityTaskTimedOut             = timedout
-        | e ^. heEventType == RequestCancelActivityTaskFailed  = failed
+        | e ^. heEventType == ActivityTaskCanceled             = completed
+        | e ^. heEventType == ActivityTaskTimedOut             = restart
+        | e ^. heEventType == ActivityTaskFailed               = restart
+        | e ^. heEventType == RequestCancelActivityTaskFailed  = canceled
         | otherwise                                            = f es
   events <- view dcEvents
   f events

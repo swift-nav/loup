@@ -25,17 +25,17 @@ pollActivity domain list = do
   pfatrs <- send $ pollForActivityTask domain list
   return (pfatrs ^. pfatrsTaskToken, pfatrs ^. pfatrsInput)
 
--- | Successful activity completion.
---
-completeActivity :: MonadAmazonCtx c m => Text -> m ()
-completeActivity token =
-  void $ send $ respondActivityTaskCompleted token
-
 -- | Cancel activity.
 --
 cancelActivity :: MonadAmazonCtx c m => Text -> m ()
 cancelActivity token =
   void $ send $ respondActivityTaskCanceled token
+
+-- | Fail activity.
+--
+failActivity :: MonadAmazonCtx c m => Text -> m ()
+failActivity token =
+  void $ send $ respondActivityTaskFailed token
 
 -- | Hearbeat.
 --
@@ -74,7 +74,7 @@ runActivity token command input = do
   intempdir $ do
     liftIO $ maybe_ input $ writeTextFile "input.json"
     stdout $ inshell command mempty
-  completeActivity token
+  failActivity token
 
 -- | Actor logic - poll for work, download artifacts, run command, upload artifacts.
 --
