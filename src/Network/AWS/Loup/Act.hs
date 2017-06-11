@@ -73,7 +73,7 @@ runActivity token command input = do
   traceInfo "run" [ "command" .= command, "input" .= input]
   intempdir $ do
     liftIO $ maybe_ input $ writeTextFile "input.json"
-    stdout $ inshell command mempty
+    stderr $ inshell command mempty
   failActivity token
 
 -- | Actor logic - poll for work, download artifacts, run command, upload artifacts.
