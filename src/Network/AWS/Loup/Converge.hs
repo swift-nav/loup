@@ -10,10 +10,11 @@ module Network.AWS.Loup.Converge
   ) where
 
 import Control.Monad.Trans.AWS
+import Data.HashSet             hiding (filter)
 import Data.Time.Clock.POSIX
 import Data.Yaml
 import Network.AWS.Loup.Ctx
-import Network.AWS.Loup.Prelude
+import Network.AWS.Loup.Prelude hiding (delete)
 import Network.AWS.Loup.Types
 import Network.AWS.SWF
 
@@ -48,9 +49,9 @@ converge :: MonadAmazonCtx c m => Text -> Pool -> m ()
 converge domain pool =
   preAmazonCtx [ "label" .= LabelDecide, "domain" .= domain, "pool" .= pool ] $ do
     let activity = pool ^. pTask ^. tActivityType
-    wids  <- listWorkflows domain activity
+    wids <- fromList <$> listWorkflows domain activity
     let fold kvs as action = do
-          let g k v bs = if k `elem` bs then return $ k `delete` bs else action k v >> return bs
+          let g k v bs = if k `member` bs then return $ k `delete` bs else action k v >> return bs
           ifoldrM g as kvs
     wids' <- fold (pool ^. pWorkers) wids $ \wid input -> do
       traceInfo "start" [ "wid" .= wid, "input" .= input ]

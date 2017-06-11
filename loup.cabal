@@ -43,6 +43,7 @@ library
                      , preamble
                      , time
                      , turtle
+                     , unordered-containers
                      , uuid
                      , yaml
 
