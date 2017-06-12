@@ -119,12 +119,18 @@ canceled = do
   traceInfo "canceled" mempty
   return [ cancelActivity ]
 
+nothing :: MonadDecisionCtx c m => m [Decision]
+nothing = do
+  events <- view dcEvents
+  traceError "none" [ "events" .= (show . view heEventType <$> events) ]
+  return mempty
+
 -- | Schedule decision based on history events.
 --
 schedule :: MonadDecisionCtx c m => m [Decision]
 schedule = do
   traceInfo "schedule" mempty
-  let f []                                                     = return mempty
+  let f []                                                     = nothing
       f (e:es)
         | e ^. heEventType == WorkflowExecutionStarted         = begin e
         | e ^. heEventType == WorkflowExecutionCancelRequested = cancel
