@@ -16,7 +16,7 @@ import Network.AWS.Loup.Ctx
 import Network.AWS.Loup.Prelude
 import Network.AWS.Loup.Types
 import Network.AWS.SWF
-import Turtle                          hiding (input)
+import Turtle                          hiding (count, input)
 
 -- | Poll for activity.
 --
@@ -90,7 +90,7 @@ act domain queue interval command =
 
 -- | Run actor from main with configuration.
 --
-actMain :: MonadControl m => Text -> Text -> Int -> Text -> m ()
-actMain domain queue interval command =
+actMain :: MonadControl m => Text -> Text -> Int -> Int -> Text -> m ()
+actMain domain queue interval count command =
   runResourceT $ runCtx $ runStatsCtx $ runAmazonCtx $
-    forever $ act domain queue interval command
+    runConcurrent $ replicate count $ forever $ act domain queue interval command

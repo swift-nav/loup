@@ -18,6 +18,8 @@ data Args = Args
     -- ^ Queue to listen to act on.
   , interval :: Int
     -- ^ Interval to heartbeat at.
+  , count    :: Int
+    -- ^ Number of actors to run concurrently.
   , command  :: Text
     -- ^ Command to run.
   } deriving (Show, Generic)
@@ -33,4 +35,5 @@ main = do
     (domain args)
     (queue args)
     (interval args)
+    (count args)
     (command args)
