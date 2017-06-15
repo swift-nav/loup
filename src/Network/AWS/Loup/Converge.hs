@@ -47,7 +47,7 @@ cancelWorkflow domain wid =
 --
 converge :: MonadAmazonCtx c m => Text -> Pool -> m ()
 converge domain pool =
-  preAmazonCtx [ "label" .= LabelDecide, "domain" .= domain, "pool" .= pool ] $ do
+  preAmazonCtx [ "label" .= LabelDecide, "domain" .= domain ] $ do
     let activity = pool ^. pTask ^. tActivityType
     wids <- fromList <$> listWorkflows domain activity
     let fold kvs as action = do

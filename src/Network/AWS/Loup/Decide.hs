@@ -147,7 +147,7 @@ schedule = do
 --
 decide :: MonadAmazonCtx c m => Text -> Plan -> m ()
 decide domain plan =
-  preAmazonCtx [ "label" .= LabelDecide, "domain" .= domain, "plan" .= plan ] $ do
+  preAmazonCtx [ "label" .= LabelDecide, "domain" .= domain ] $ do
     traceInfo "poll" mempty
     (token, events) <- pollDecision domain (plan ^. pDecisionTask ^. tTaskList)
     maybe_ token $ \token' -> do
