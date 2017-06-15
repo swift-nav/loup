@@ -46,12 +46,13 @@ heartbeat token = do
 
 -- | Run a managed action inside a temp directory.
 --
-intempdir :: MonadControl m => Managed a -> m ()
-intempdir action =
+intempdir :: MonadControl m => Bool -> Managed a -> m ()
+intempdir copy action =
   bracket pwd cd $ \fromdir ->
     sh $ using $ do
       todir <- mktempdir "/tmp" "loup-"
-      cptree fromdir todir
+      when copy $
+        cptree fromdir todir
       cd todir
       action
 
@@ -68,29 +69,29 @@ runHeartbeat token interval = do
 
 -- | Run command with input.
 --
-runActivity :: MonadAmazonCtx c m => Text -> Text -> Maybe Text -> m ()
-runActivity token command input = do
+runActivity :: MonadAmazonCtx c m => Text -> Bool -> Text -> Maybe Text -> m ()
+runActivity token copy command input = do
   traceInfo "run" [ "command" .= command, "input" .= input]
-  intempdir $ do
+  intempdir copy $ do
     liftIO $ maybe_ input $ writeTextFile "input.json"
     stderr $ inshell command mempty
   failActivity token
 
 -- | Actor logic - poll for work, download artifacts, run command, upload artifacts.
 --
-act :: MonadAmazonCtx c m => Text -> Text -> Int -> Text -> m ()
-act domain queue interval command =
+act :: MonadAmazonCtx c m => Text -> Text -> Int -> Bool -> Text -> m ()
+act domain queue interval copy command =
   preAmazonCtx [ "label" .= LabelAct, "domain" .= domain, "queue" .= queue ] $ do
     traceInfo "poll" mempty
     (token, input) <- pollActivity domain (taskList queue)
     maybe_ token $ \token' -> do
       traceInfo "start" mempty
-      race_ (runHeartbeat token' interval) (runActivity token' command input)
+      race_ (runHeartbeat token' interval) (runActivity token' copy command input)
       traceInfo "finish" mempty
 
 -- | Run actor from main with configuration.
 --
-actMain :: MonadControl m => Text -> Text -> Int -> Int -> Text -> m ()
-actMain domain queue interval count command =
+actMain :: MonadControl m => Text -> Text -> Int -> Int -> Bool -> Text -> m ()
+actMain domain queue count interval copy command =
   runResourceT $ runCtx $ runStatsCtx $ runAmazonCtx $
-    runConcurrent $ replicate count $ forever $ act domain queue interval command
+    runConcurrent $ replicate count $ forever $ act domain queue interval copy command

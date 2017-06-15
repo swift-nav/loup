@@ -16,10 +16,12 @@ data Args = Args
     -- ^ Workflow domain.
   , queue    :: Text
     -- ^ Queue to listen to act on.
-  , interval :: Int
-    -- ^ Interval to heartbeat at.
   , count    :: Int
     -- ^ Number of actors to run concurrently.
+  , interval :: Int
+    -- ^ Interval to heartbeat at.
+  , copy     :: Bool
+    -- ^ Copy working directory.
   , command  :: Text
     -- ^ Command to run.
   } deriving (Show, Generic)
@@ -34,6 +36,7 @@ main = do
   actMain
     (domain args)
     (queue args)
-    (interval args)
     (count args)
+    (interval args)
+    (copy args)
     (command args)
