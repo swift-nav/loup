@@ -51,7 +51,9 @@ converge domain pool =
     let activity = pool ^. pTask ^. tActivityType
     wids <- fromList <$> listWorkflows domain activity
     let fold kvs as action = do
-          let g k v bs = if k `member` bs then return $ k `delete` bs else action k v >> return bs
+          let g k v bs = do
+                let k' = k -.- show (hash v)
+                if k' `member` bs then return $ k' `delete` bs else action k' v >> return bs
           ifoldrM g as kvs
     wids' <- fold (pool ^. pWorkers) wids $ \wid input -> do
       traceInfo "start" [ "wid" .= wid, "input" .= input ]
