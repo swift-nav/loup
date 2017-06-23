@@ -20,34 +20,37 @@ import Network.AWS.SWF
 
 -- | List open workflows.
 --
-listWorkflows :: MonadAmazonCtx c m => Text -> ActivityType -> m [Text]
-listWorkflows domain activity = do
-  let etf = executionTimeFilter $ posixSecondsToUTCTime $ fromIntegral (0 :: Int)
-      wtf = workflowTypeFilter (activity ^. atName)
-  weis <- pages $ set loweTypeFilter (return wtf) $ listOpenWorkflowExecutions domain etf
-  let predicate wei = maybe True not $ wei ^. weiCancelRequested
-  return $ view weWorkflowId . view weiExecution <$> filter predicate (join $ view weiExecutionInfos <$> weis)
+listWorkflows :: MonadStatsCtx c m => Text -> ActivityType -> m [Text]
+listWorkflows domain activity =
+  runResourceT $ runAmazonCtx $ do
+    let etf = executionTimeFilter $ posixSecondsToUTCTime $ fromIntegral (0 :: Int)
+        wtf = workflowTypeFilter (activity ^. atName)
+    weis <- pages $ set loweTypeFilter (return wtf) $ listOpenWorkflowExecutions domain etf
+    let predicate wei = maybe True not $ wei ^. weiCancelRequested
+    return $ view weWorkflowId . view weiExecution <$> filter predicate (join $ view weiExecutionInfos <$> weis)
 
 -- | Start a workflow.
 --
-startWorkflow :: MonadAmazonCtx c m => Text -> ActivityType -> TaskList -> Text -> Maybe Text -> m ()
-startWorkflow domain activity list wid input = do
-  let wt = workflowType (activity ^. atName) (activity ^. atVersion)
-  void $ send $ startWorkflowExecution domain wid wt
-    & sTaskList .~ return list
-    & sInput .~ input
+startWorkflow :: MonadStatsCtx c m => Text -> ActivityType -> TaskList -> Text -> Maybe Text -> m ()
+startWorkflow domain activity list wid input =
+  runResourceT $ runAmazonCtx $ do
+    let wt = workflowType (activity ^. atName) (activity ^. atVersion)
+    void $ send $ startWorkflowExecution domain wid wt
+      & sTaskList .~ return list
+      & sInput .~ input
 
 -- | Cancel a workflow.
 --
-cancelWorkflow :: MonadAmazonCtx c m => Text -> Text -> m ()
+cancelWorkflow :: MonadStatsCtx c m => Text -> Text -> m ()
 cancelWorkflow domain wid =
-  void $ send $ requestCancelWorkflowExecution domain wid
+  runResourceT $ runAmazonCtx $
+    void $ send $ requestCancelWorkflowExecution domain wid
 
 -- | Converger logic - get running workers and converge against pool.
 --
-converge :: MonadAmazonCtx c m => Text -> Pool -> m ()
+converge :: MonadStatsCtx c m => Text -> Pool -> m ()
 converge domain pool =
-  preAmazonCtx [ "label" .= LabelDecide, "domain" .= domain ] $ do
+  preStatsCtx [ "label" .= LabelDecide, "domain" .= domain ] $ do
     let activity = pool ^. pTask ^. tActivityType
     wids <- fromList <$> listWorkflows domain activity
     let fold kvs as action = do
@@ -66,6 +69,6 @@ converge domain pool =
 --
 convergeMain :: MonadControl m => Text -> FilePath -> m ()
 convergeMain domain file =
-  runCtx $ runStatsCtx $ runAmazonCtx $ do
+  runCtx $ runStatsCtx $ do
     pools <- liftIO $ join . maybeToList <$> decodeFile file
-    runConcurrent $ runResourceT . converge domain <$> pools
+    runConcurrent $ converge domain <$> pools

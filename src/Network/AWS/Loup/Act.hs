@@ -20,29 +20,33 @@ import Turtle                          hiding (count, input)
 
 -- | Poll for activity.
 --
-pollActivity :: MonadAmazonCtx c m => Text -> TaskList -> m (Maybe Text, Maybe Text)
-pollActivity domain list = do
-  pfatrs <- send $ pollForActivityTask domain list
-  return (pfatrs ^. pfatrsTaskToken, pfatrs ^. pfatrsInput)
+pollActivity :: MonadStatsCtx c m => Text -> TaskList -> m (Maybe Text, Maybe Text)
+pollActivity domain list =
+  runResourceT $ runAmazonCtx $ do
+    pfatrs <- send $ pollForActivityTask domain list
+    return (pfatrs ^. pfatrsTaskToken, pfatrs ^. pfatrsInput)
 
 -- | Cancel activity.
 --
-cancelActivity :: MonadAmazonCtx c m => Text -> m ()
+cancelActivity :: MonadStatsCtx c m => Text -> m ()
 cancelActivity token =
-  void $ send $ respondActivityTaskCanceled token
+  runResourceT $ runAmazonCtx $
+    void $ send $ respondActivityTaskCanceled token
 
 -- | Fail activity.
 --
-failActivity :: MonadAmazonCtx c m => Text -> m ()
+failActivity :: MonadStatsCtx c m => Text -> m ()
 failActivity token =
-  void $ send $ respondActivityTaskFailed token
+  runResourceT $ runAmazonCtx $
+    void $ send $ respondActivityTaskFailed token
 
 -- | Hearbeat.
 --
-heartbeat :: MonadAmazonCtx c m => Text -> m Bool
-heartbeat token = do
-  rathrs <- send $ recordActivityTaskHeartbeat token
-  return $ rathrs ^. rathrsCancelRequested
+heartbeat :: MonadStatsCtx c m => Text -> m Bool
+heartbeat token =
+  runResourceT $ runAmazonCtx $ do
+    rathrs <- send $ recordActivityTaskHeartbeat token
+    return $ rathrs ^. rathrsCancelRequested
 
 -- | Run a managed action inside a temp directory.
 --
@@ -58,7 +62,7 @@ intempdir copy action =
 
 -- | Run heartbeat.
 --
-runHeartbeat :: MonadAmazonCtx c m => Text -> Int -> m ()
+runHeartbeat :: MonadStatsCtx c m => Text -> Int -> m ()
 runHeartbeat token interval = do
   traceInfo "heartbeat" mempty
   liftIO $ threadDelay $ interval * 1000000
@@ -69,7 +73,7 @@ runHeartbeat token interval = do
 
 -- | Run command with input.
 --
-runActivity :: MonadAmazonCtx c m => Text -> Bool -> Text -> Maybe Text -> m ()
+runActivity :: MonadStatsCtx c m => Text -> Bool -> Text -> Maybe Text -> m ()
 runActivity token copy command input = do
   traceInfo "run" [ "command" .= command, "input" .= input]
   intempdir copy $ do
@@ -79,9 +83,9 @@ runActivity token copy command input = do
 
 -- | Actor logic - poll for work, download artifacts, run command, upload artifacts.
 --
-act :: MonadAmazonCtx c m => Text -> Text -> Int -> Bool -> Text -> m ()
+act :: MonadStatsCtx c m => Text -> Text -> Int -> Bool -> Text -> m ()
 act domain queue interval copy command =
-  preAmazonCtx [ "label" .= LabelAct, "domain" .= domain, "queue" .= queue ] $ do
+  preStatsCtx [ "label" .= LabelAct, "domain" .= domain, "queue" .= queue ] $ do
     traceInfo "poll" mempty
     (token, input) <- pollActivity domain (taskList queue)
     maybe_ token $ \token' -> do
@@ -93,5 +97,5 @@ act domain queue interval copy command =
 --
 actMain :: MonadControl m => Text -> Text -> Int -> Int -> Bool -> Text -> m ()
 actMain domain queue count interval copy command =
-  runResourceT $ runCtx $ runStatsCtx $ runAmazonCtx $
+  runResourceT $ runCtx $ runStatsCtx $
     runConcurrent $ replicate count $ forever $ act domain queue interval copy command

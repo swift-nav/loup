@@ -6,7 +6,6 @@
 --
 module Network.AWS.Loup.Ctx
   ( runAmazonCtx
-  , preAmazonCtx
   , runDecisionCtx
   ) where
 
@@ -60,16 +59,9 @@ runAmazonCtx action = do
   e <- newEnv Oregon $ FromEnv "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" mempty
   runTopTransT (AmazonCtx c e) action
 
--- | Update amazon context's preamble.
---
-preAmazonCtx :: MonadAmazonCtx c m => Pairs -> TransT AmazonCtx m a -> m a
-preAmazonCtx preamble action = do
-  c <- view amazonCtx <&> cPreamble <>~ preamble
-  runBotTransT c action
-
 -- | Run decision context.
 --
-runDecisionCtx :: MonadAmazonCtx c m => Plan -> [HistoryEvent] -> TransT DecisionCtx m a -> m a
+runDecisionCtx :: MonadStatsCtx c m => Plan -> [HistoryEvent] -> TransT DecisionCtx m a -> m a
 runDecisionCtx plan events action = do
-  c <- view amazonCtx
-  runBotTransT (DecisionCtx c plan events) action
+  c <- view statsCtx
+  runTopTransT (DecisionCtx c plan events) action

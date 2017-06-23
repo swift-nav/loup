@@ -47,27 +47,21 @@ type MonadAmazonCtx c m =
 -- Decision context.
 --
 data DecisionCtx = DecisionCtx
-  { _dcAmazonCtx :: AmazonCtx
+  { _dcStatsCtx :: StatsCtx
     -- ^ Parent context.
-  , _dcPlan      :: Plan
+  , _dcPlan     :: Plan
     -- ^ Decision plan.
-  , _dcEvents    :: [HistoryEvent]
+  , _dcEvents   :: [HistoryEvent]
     -- ^ History events.
   }
 
-$(makeClassyConstraints ''DecisionCtx [''HasAmazonCtx])
-
-instance HasAmazonCtx DecisionCtx where
-  amazonCtx = dcAmazonCtx
+$(makeClassyConstraints ''DecisionCtx [''HasStatsCtx])
 
 instance HasStatsCtx DecisionCtx where
-  statsCtx = amazonCtx . statsCtx
+  statsCtx = dcStatsCtx
 
 instance HasCtx DecisionCtx where
   ctx = statsCtx . ctx
-
-instance HasEnv DecisionCtx where
-  environment = amazonCtx . environment
 
 type MonadDecisionCtx c m =
   ( MonadStatsCtx c m

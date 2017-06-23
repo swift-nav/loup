@@ -20,17 +20,19 @@ import Network.AWS.SWF
 
 -- | Poll for decision.
 --
-pollDecision :: MonadAmazonCtx c m => Text -> TaskList -> m (Maybe Text, [HistoryEvent])
-pollDecision domain list = do
-  pfdtrs <- pages $ pollForDecisionTask domain list
-  return (join $ headMay $ view pfdtrsTaskToken <$> pfdtrs, reverse $ join $ view pfdtrsEvents <$> pfdtrs)
+pollDecision :: MonadStatsCtx c m => Text -> TaskList -> m (Maybe Text, [HistoryEvent])
+pollDecision domain list =
+  runResourceT $ runAmazonCtx $ do
+    pfdtrs <- pages $ pollForDecisionTask domain list
+    return (join $ headMay $ view pfdtrsTaskToken <$> pfdtrs, reverse $ join $ view pfdtrsEvents <$> pfdtrs)
 
 -- | Successful decision completion.
 --
-completeDecision :: MonadAmazonCtx c m => Text -> [Decision] -> m ()
+completeDecision :: MonadStatsCtx c m => Text -> [Decision] -> m ()
 completeDecision token decisions =
-  void $ send $ respondDecisionTaskCompleted token
-    & rdtcDecisions .~ decisions
+  runResourceT $ runAmazonCtx $
+    void $ send $ respondDecisionTaskCompleted token
+      & rdtcDecisions .~ decisions
 
 -- | Schedule activity decision.
 --
@@ -119,6 +121,8 @@ canceled = do
   traceInfo "canceled" mempty
   return [ cancelActivity ]
 
+-- | When we run out of events.
+--
 nothing :: MonadDecisionCtx c m => m [Decision]
 nothing = do
   events <- view dcEvents
@@ -145,9 +149,9 @@ schedule = do
 
 -- | Decider logic - poll for decisions, make decisions.
 --
-decide :: MonadAmazonCtx c m => Text -> Plan -> m ()
+decide :: MonadStatsCtx c m => Text -> Plan -> m ()
 decide domain plan =
-  preAmazonCtx [ "label" .= LabelDecide, "domain" .= domain ] $ do
+  preStatsCtx [ "label" .= LabelDecide, "domain" .= domain ] $ do
     traceInfo "poll" mempty
     (token, events) <- pollDecision domain (plan ^. pDecisionTask ^. tTaskList)
     maybe_ token $ \token' -> do
@@ -161,6 +165,6 @@ decide domain plan =
 --
 decideMain :: MonadControl m => Text -> FilePath -> m ()
 decideMain domain file =
-  runCtx $ runStatsCtx $ runAmazonCtx $ do
+  runCtx $ runStatsCtx $ do
     plans <- liftIO $ join . maybeToList <$> decodeFile file
-    runConcurrent $ runResourceT . forever . decide domain <$> plans
+    runConcurrent $ forever . decide domain <$> plans
