@@ -66,6 +66,6 @@ converge domain pool =
 --
 convergeMain :: MonadControl m => Text -> FilePath -> m ()
 convergeMain domain file =
-  runResourceT $ runCtx $ runStatsCtx $ runAmazonCtx $ do
+  runCtx $ runStatsCtx $ runAmazonCtx $ do
     pools <- liftIO $ join . maybeToList <$> decodeFile file
-    runConcurrent $ converge domain <$> pools
+    runConcurrent $ runResourceT . converge domain <$> pools

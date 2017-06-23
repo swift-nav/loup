@@ -161,6 +161,6 @@ decide domain plan =
 --
 decideMain :: MonadControl m => Text -> FilePath -> m ()
 decideMain domain file =
-  runResourceT $ runCtx $ runStatsCtx $ runAmazonCtx $ do
+  runCtx $ runStatsCtx $ runAmazonCtx $ do
     plans <- liftIO $ join . maybeToList <$> decodeFile file
-    runConcurrent $ forever . decide domain <$> plans
+    runConcurrent $ runResourceT . forever . decide domain <$> plans
