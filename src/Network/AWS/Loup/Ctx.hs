@@ -44,12 +44,12 @@ topSomeExceptionCatch ex = do
 
 -- | Run bottom TransT.
 --
-runBotTransT :: (MonadMain m, HasCtx c) => c -> TransT c m a -> m a
+runBotTransT :: (MonadControl m, HasCtx c) => c -> TransT c m a -> m a
 runBotTransT c action = runTransT c $ catches action [ Handler botErrorCatch, Handler botSomeExceptionCatch ]
 
 -- | Run top TransT.
 --
-runTopTransT :: (MonadMain m, HasStatsCtx c) => c -> TransT c m a -> m a
+runTopTransT :: (MonadControl m, HasStatsCtx c) => c -> TransT c m a -> m a
 runTopTransT c action = runBotTransT c $ catch action topSomeExceptionCatch
 
 -- | Run amazon context.

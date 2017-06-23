@@ -13,7 +13,6 @@ module Network.AWS.Loup.Prelude
 
 import Control.Concurrent.Async.Lifted
 import Control.Monad.Trans.AWS
-import Control.Monad.Trans.Control
 import Data.Aeson
 import Data.ByteString.Lazy            hiding (map)
 import Data.Conduit

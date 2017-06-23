@@ -39,7 +39,6 @@ library
                      , conduit
                      , lifted-async
                      , lifted-base
-                     , monad-control
                      , preamble
                      , time
                      , turtle
