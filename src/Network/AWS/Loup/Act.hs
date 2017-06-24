@@ -75,27 +75,65 @@ runHeartbeat token interval = do
 --
 runActivity :: MonadStatsCtx c m => Text -> Bool -> Text -> Maybe Text -> m ()
 runActivity token copy command input = do
-  traceInfo "run" [ "command" .= command, "input" .= input]
+  traceInfo "run" [ "command" .= command, "input" .= input ]
   intempdir copy $ do
     liftIO $ maybe_ input $ writeTextFile "input.json"
     stderr $ inshell command mempty
   failActivity token
 
+runActivityLib :: MonadStatsCtx c m => Text -> Maybe Text -> (Maybe Text -> m a) -> m ()
+runActivityLib token input action = do
+  traceInfo "run" [ "input" .= input ]
+  void $ action input
+  failActivity token
+
+actLib :: MonadStatsCtx c m => Text -> Text -> Int -> (Maybe Text -> m a) -> m ()
+actLib domain queue interval action = do
+  traceInfo "poll" mempty
+  (token, input) <- pollActivity domain (taskList queue)
+  maybe_ token $ \token' -> do
+    traceInfo "start" mempty
+    race_ (runHeartbeat token' interval) (runActivityLib token' input action)
+    traceInfo "finish" mempty
+
+act :: MonadStatsCtx c m => Text -> Text -> Int -> (Text -> Maybe Text -> m a) -> m ()
+act domain queue interval action = do
+  traceInfo "poll" mempty
+  (token, input) <- pollActivity domain (taskList queue)
+  maybe_ token $ \token' -> do
+    traceInfo "start" mempty
+    race_ (runHeartbeat token' interval) (action token' input)
+    traceInfo "finish" mempty
+
 -- | Actor logic - poll for work, download artifacts, run command, upload artifacts.
 --
-act :: MonadStatsCtx c m => Text -> Text -> Int -> Bool -> Text -> m ()
-act domain queue interval copy command =
-  preStatsCtx [ "label" .= LabelAct, "domain" .= domain, "queue" .= queue ] $ do
-    traceInfo "poll" mempty
-    (token, input) <- pollActivity domain (taskList queue)
-    maybe_ token $ \token' -> do
-      traceInfo "start" mempty
-      race_ (runHeartbeat token' interval) (runActivity token' copy command input)
-      traceInfo "finish" mempty
+-- act :: MonadStatsCtx c m => Text -> Text -> Int -> Bool -> Text -> m ()
+-- act domain queue interval copy command =
+--   preStatsCtx [ "label" .= LabelAct, "domain" .= domain, "queue" .= queue ] $ do
+--     traceInfo "poll" mempty
+--     (token, input) <- pollActivity domain (taskList queue)
+--     maybe_ token $ \token' -> do
+--       traceInfo "start" mempty
+--       race_ (runHeartbeat token' interval) (runActivity token' copy command input)
+--       traceInfo "finish" mempty
+
+runActWrapper :: MonadStatsCtx c m => Bool -> Text -> Text -> Maybe Text -> m ()
+runActWrapper copy command token input = do
+  traceInfo "run" [ "command" .= command, "input" .= input ]
+  intempdir copy $ do
+    liftIO $ maybe_ input $ writeTextFile "input.json"
+    stderr $ inshell command mempty
+  failActivity token
+
+actWrapper :: MonadStatsCtx c m => Text -> Text -> Int -> Bool -> Text -> m ()
+actWrapper domain queue interval copy command =
+  preStatsCtx [ "label" .= LabelAct, "domain" .= domain, "queue" .= queue ] $
+    act domain queue interval $
+      runActWrapper copy command
 
 -- | Run actor from main with configuration.
 --
 actMain :: MonadControl m => Text -> Text -> Int -> Int -> Bool -> Text -> m ()
 actMain domain queue count interval copy command =
   runCtx $ runStatsCtx $
-    runConcurrent $ replicate count $ forever $ act domain queue interval copy command
+    runConcurrent $ replicate count $ forever $ actWrapper domain queue interval copy command
