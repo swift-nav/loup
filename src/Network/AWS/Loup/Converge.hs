@@ -5,7 +5,8 @@
 -- | SWF Converger logic.
 --
 module Network.AWS.Loup.Converge
-  ( converge
+  ( converging
+  , converge
   , convergeMain
   ) where
 
@@ -48,8 +49,8 @@ cancelWorkflow domain wid =
 
 -- | Converger logic - get running workers and converge against pool.
 --
-converge :: MonadStatsCtx c m => Text -> Pool -> m ()
-converge domain pool =
+converging :: MonadStatsCtx c m => Text -> Pool -> m ()
+converging domain pool =
   preStatsCtx [ "label" .= LabelDecide, "domain" .= domain ] $ do
     let activity = pool ^. pTask ^. tActivityType
     wids <- fromList <$> listWorkflows domain activity
@@ -64,6 +65,13 @@ converge domain pool =
     forM_ wids' $ \wid -> do
       traceInfo "cancel" [ "wid" .= wid ]
       cancelWorkflow domain wid
+
+-- | Converging setup from main.
+--
+converge :: MonadStatsCtx c m => Text -> Pool -> m ()
+converge domain pool =
+  preStatsCtx [ "label" .= LabelDecide, "domain" .= domain ] $
+    converging domain pool
 
 -- | Run converger from main with configuration.
 --

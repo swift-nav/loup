@@ -5,7 +5,8 @@
 -- | SWF Decider logic.
 --
 module Network.AWS.Loup.Decide
-  ( decide
+  ( deciding
+  , decide
   , decideMain
   ) where
 
@@ -149,17 +150,23 @@ schedule = do
 
 -- | Decider logic - poll for decisions, make decisions.
 --
+deciding :: MonadStatsCtx c m => Text -> Plan -> m ()
+deciding domain plan = do
+  traceInfo "poll" mempty
+  (token, events) <- pollDecision domain (plan ^. pDecisionTask ^. tTaskList)
+  maybe_ token $ \token' -> do
+    traceInfo "start" mempty
+    runDecisionCtx plan events $ do
+      decisions <- schedule
+      completeDecision token' decisions
+    traceInfo "finish" mempty
+
+-- | Deciding setup from main.
+--
 decide :: MonadStatsCtx c m => Text -> Plan -> m ()
 decide domain plan =
-  preStatsCtx [ "label" .= LabelDecide, "domain" .= domain ] $ do
-    traceInfo "poll" mempty
-    (token, events) <- pollDecision domain (plan ^. pDecisionTask ^. tTaskList)
-    maybe_ token $ \token' -> do
-      traceInfo "start" mempty
-      runDecisionCtx plan events $ do
-        decisions <- schedule
-        completeDecision token' decisions
-      traceInfo "finish" mempty
+  preStatsCtx [ "label" .= LabelDecide, "domain" .= domain ] $
+    deciding domain plan
 
 -- | Run decider from main with configuration.
 --

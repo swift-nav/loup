@@ -13,6 +13,7 @@ module Network.AWS.Loup.Act
 import Control.Concurrent
 import Control.Concurrent.Async.Lifted
 import Control.Monad.Trans.AWS
+import Data.Yaml
 import Network.AWS.Loup.Ctx
 import Network.AWS.Loup.Prelude
 import Network.AWS.Loup.Types
@@ -74,23 +75,24 @@ runHeartbeat token interval = do
 
 -- | Run command with input.
 --
-runActivity :: MonadStatsCtx c m => Bool -> Text -> Text -> Maybe Text -> m ()
+runActivity :: MonadStatsCtx c m => Bool -> Text -> Text -> Maybe Value -> m ()
 runActivity copy command token input = do
   traceInfo "run" [ "command" .= command, "input" .= input ]
   intempdir copy $ do
-    liftIO $ maybe_ input $ writeTextFile "input.json"
+    liftIO $ maybe_ input $ encodeFile "input.json"
     stderr $ inshell command mempty
   failActivity token
 
 -- | Actor logic - poll for work, download artifacts, run command, upload artifacts.
 --
-activity :: MonadStatsCtx c m => Text -> Text -> Int -> (Text -> Maybe Text -> m a) -> m ()
+activity :: (MonadStatsCtx c m, FromJSON a) => Text -> Text -> Int -> (Text -> Maybe a -> m b) -> m ()
 activity domain queue interval action = do
   traceInfo "poll" mempty
   (token, input) <- pollActivity domain (taskList queue)
   maybe_ token $ \token' -> do
     traceInfo "start" mempty
-    race_ (runHeartbeat token' interval) (action token' input)
+    let input' = join $ decode . encodeUtf8 <$> input
+    race_ (runHeartbeat token' interval) (action token' input')
     traceInfo "finish" mempty
 
 -- | Activity setup fom main.
