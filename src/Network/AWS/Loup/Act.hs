@@ -97,5 +97,5 @@ act domain queue interval copy command =
 --
 actMain :: MonadControl m => Text -> Text -> Int -> Int -> Bool -> Text -> m ()
 actMain domain queue count interval copy command =
-  runResourceT $ runCtx $ runStatsCtx $
+  runCtx $ runStatsCtx $
     runConcurrent $ replicate count $ forever $ act domain queue interval copy command
