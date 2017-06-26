@@ -75,24 +75,25 @@ runHeartbeat token interval = do
 
 -- | Run command with input.
 --
-runActivity :: MonadStatsCtx c m => Bool -> Text -> Text -> Maybe Value -> m ()
-runActivity copy command token input = do
+runActivity :: MonadStatsCtx c m => Bool -> Text -> Maybe Value -> m ()
+runActivity copy command input = do
   traceInfo "run" [ "command" .= command, "input" .= input ]
   intempdir copy $ do
     liftIO $ maybe_ input $ encodeFile "input.json"
     stderr $ inshell command mempty
-  failActivity token
 
 -- | Actor logic - poll for work, download artifacts, run command, upload artifacts.
 --
-activity :: (MonadStatsCtx c m, FromJSON a) => Text -> Text -> Int -> (Text -> Maybe a -> m b) -> m ()
+activity :: (MonadStatsCtx c m, FromJSON a) => Text -> Text -> Int -> (Maybe a -> m b) -> m ()
 activity domain queue interval action = do
   traceInfo "poll" mempty
   (token, input) <- pollActivity domain (taskList queue)
   maybe_ token $ \token' -> do
     traceInfo "start" mempty
     let input' = join $ decode . encodeUtf8 <$> input
-    race_ (runHeartbeat token' interval) (action token' input')
+    race_ (runHeartbeat token' interval) $ do
+      void $ action input'
+      failActivity token'
     traceInfo "finish" mempty
 
 -- | Activity setup fom main.
