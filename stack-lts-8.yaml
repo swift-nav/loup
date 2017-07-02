@@ -1,0 +1,8 @@
+flags: {}
+packages:
+- .
+resolver: lts-8.21
+extra-deps:
+- preamble-0.0.44
+- shakers-0.0.25
+pvp-bounds: lower

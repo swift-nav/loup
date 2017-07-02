@@ -34,7 +34,8 @@ library
   build-depends:       aeson
                      , amazonka
                      , amazonka-swf
-                     , base == 4.8.*
+                     , base >= 4.8 && < 5
+                     , basic-prelude
                      , bytestring
                      , conduit
                      , lifted-async
@@ -76,6 +77,6 @@ executable loup-converger
 executable shake-loup
   main-is:             Shakefile.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
-  build-depends:       base == 4.8.*
+  build-depends:       base >= 4.8 && < 5
                      , shakers
   default-language:    Haskell2010

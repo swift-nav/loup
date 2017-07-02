@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -38,7 +39,7 @@ botErrorCatch ex = do
 --
 topSomeExceptionCatch :: MonadStatsCtx c m => SomeException -> m a
 topSomeExceptionCatch ex = do
-  statsIncrement "exception" [ "reason" =. show ex ]
+  statsIncrement "exception" [ "reason" =. textFromString (displayException ex) ]
   throwIO ex
 
 -- | Run bottom TransT.
@@ -56,7 +57,11 @@ runTopTransT c action = runBotTransT c $ catch action topSomeExceptionCatch
 runAmazonCtx :: MonadStatsCtx c m => TransT AmazonCtx m a -> m a
 runAmazonCtx action = do
   c <- view statsCtx
+#if MIN_VERSION_amazonka(1,4,5)
+  e <- newEnv $ FromEnv "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" mempty mempty
+#else
   e <- newEnv Oregon $ FromEnv "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" mempty
+#endif
   runTopTransT (AmazonCtx c e) action
 
 -- | Run decision context.
