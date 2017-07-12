@@ -1,5 +1,5 @@
 name:                  loup
-version:               0.0.11
+version:               0.0.12
 synopsis:              Amazon Simple Workflow Service Wrapper for Work Pools.
 description:           Loup is a wrapper around Amazon Simple Workflow Service for Work Pools.
 homepage:              https://github.com/swift-nav/loup
