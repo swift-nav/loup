@@ -35,7 +35,6 @@ library
                      , amazonka
                      , amazonka-swf
                      , base >= 4.8 && < 5
-                     , basic-prelude
                      , bytestring
                      , conduit
                      , lifted-async

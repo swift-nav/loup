@@ -127,7 +127,7 @@ canceled = do
 nothing :: MonadDecisionCtx c m => m [Decision]
 nothing = do
   events <- view dcEvents
-  traceError "none" [ "events" .= (show . view heEventType <$> events) ]
+  traceError "none" [ "events" .= (textShow . view heEventType <$> events) ]
   return mempty
 
 -- | Schedule decision based on history events.

@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP               #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -57,11 +56,7 @@ converging domain pool =
     wids <- fromList <$> listWorkflows domain activity
     let fold kvs as action = do
           let g k v bs = do
-#if MIN_VERSION_basic_prelude(0,6,1)
-                let k' = k -.- textFromString (show (hash v))
-#else
-                let k' = k -.- show (hash v)
-#endif
+                let k' = k -.- textShow (hash v)
                 if k' `member` bs then return $ k' `delete` bs else action k' v >> return bs
           ifoldrM g as kvs
     wids' <- fold (pool ^. pWorkers) wids $ \wid input -> do
