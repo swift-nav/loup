@@ -26,7 +26,7 @@ pollActivity :: MonadStatsCtx c m => Text -> TaskList -> m (Maybe Text, Maybe Te
 pollActivity domain list =
   runResourceT $ runAmazonCtx $ do
     pfatrs <- send $ pollForActivityTask domain list
-    return (pfatrs ^. pfatrsTaskToken, pfatrs ^. pfatrsInput)
+    pure (pfatrs ^. pfatrsTaskToken, pfatrs ^. pfatrsInput)
 
 -- | Cancel activity.
 --
@@ -48,7 +48,7 @@ heartbeat :: MonadStatsCtx c m => Text -> m Bool
 heartbeat token =
   runResourceT $ runAmazonCtx $ do
     rathrs <- send $ recordActivityTaskHeartbeat token
-    return $ rathrs ^. rathrsCancelRequested
+    pure (rathrs ^. rathrsCancelRequested)
 
 -- | Run a managed action inside a temp directory.
 --

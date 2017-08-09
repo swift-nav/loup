@@ -25,7 +25,7 @@ pollDecision :: MonadStatsCtx c m => Text -> TaskList -> m (Maybe Text, [History
 pollDecision domain list =
   runResourceT $ runAmazonCtx $ do
     pfdtrs <- pages $ pollForDecisionTask domain list
-    return (join $ headMay $ view pfdtrsTaskToken <$> pfdtrs, reverse $ join $ view pfdtrsEvents <$> pfdtrs)
+    pure (join $ headMay $ view pfdtrsTaskToken <$> pfdtrs, reverse $ join $ view pfdtrsEvents <$> pfdtrs)
 
 -- | Successful decision completion.
 --
@@ -40,10 +40,10 @@ completeDecision token decisions =
 scheduleActivity :: UUID -> ActivityType -> TaskList -> Maybe Text -> Decision
 scheduleActivity uid activity list input = do
   let satda = scheduleActivityTaskDecisionAttributes activity (toText uid)
-        & satdaTaskList .~ return list
+        & satdaTaskList .~ pure list
         & satdaInput    .~ input
   decision ScheduleActivityTask
-    & dScheduleActivityTaskDecisionAttributes .~ return satda
+    & dScheduleActivityTaskDecisionAttributes .~ pure satda
 
 -- | Complete activity decision.
 --
@@ -51,7 +51,7 @@ completeActivity :: Decision
 completeActivity = do
   let cweda = completeWorkflowExecutionDecisionAttributes
   decision CompleteWorkflowExecution
-    & dCompleteWorkflowExecutionDecisionAttributes .~ return cweda
+    & dCompleteWorkflowExecutionDecisionAttributes .~ pure cweda
 
 -- | Cancel activity decision.
 --
@@ -59,7 +59,7 @@ cancelActivity :: Decision
 cancelActivity = do
   let cweda = cancelWorkflowExecutionDecisionAttributes
   decision CancelWorkflowExecution
-    & dCancelWorkflowExecutionDecisionAttributes .~ return cweda
+    & dCancelWorkflowExecutionDecisionAttributes .~ pure cweda
 
 -- | Request to cancel activity decision.
 --
@@ -67,14 +67,14 @@ requestCancel :: UUID -> Decision
 requestCancel uid = do
   let rcatda = requestCancelActivityTaskDecisionAttributes (toText uid)
   decision RequestCancelActivityTask
-    & dRequestCancelActivityTaskDecisionAttributes .~ return rcatda
+    & dRequestCancelActivityTaskDecisionAttributes .~ pure rcatda
 
 -- | Find a matching event type.
 --
 findEvent :: MonadDecisionCtx c m => EventType -> m (Maybe HistoryEvent)
 findEvent eventType = do
-  let f []     = return Nothing
-      f (e:es) = bool (f es) (return $ Just e) $ e ^. heEventType == eventType
+  let f []     = pure Nothing
+      f (e:es) = bool (f es) (pure $ Just e) $ e ^. heEventType == eventType
   events <- view dcEvents
   f events
 
@@ -86,7 +86,7 @@ begin event = do
   uid  <- liftIO nextRandom
   task <- view pActivityTask <$> view dcPlan
   let input = join $ view weseaInput <$> event ^. heWorkflowExecutionStartedEventAttributes
-  return [ scheduleActivity uid (task ^. tActivityType) (task ^. tTaskList) input ]
+  pure [ scheduleActivity uid (task ^. tActivityType) (task ^. tTaskList) input ]
 
 -- | Cancel workflow step.
 --
@@ -95,14 +95,14 @@ cancel = do
   traceInfo "cancel" mempty
   event <- findEvent ActivityTaskScheduled
   let uid = join $ fromText . view atseaActivityId <$> join (view heActivityTaskScheduledEventAttributes <$> event)
-  return [ maybe cancelActivity requestCancel uid ]
+  pure [ maybe cancelActivity requestCancel uid ]
 
 -- | Completed workflow step.
 --
 completed :: MonadDecisionCtx c m => m [Decision]
 completed = do
   traceInfo "completed" mempty
-  return [ completeActivity ]
+  pure [ completeActivity ]
 
 -- | Restart workflow step.
 --
@@ -113,14 +113,14 @@ restart = do
   task  <- view pActivityTask <$> view dcPlan
   event <- findEvent WorkflowExecutionStarted
   let input = join $ view weseaInput <$> join (view heWorkflowExecutionStartedEventAttributes <$> event)
-  return [ scheduleActivity uid (task ^. tActivityType) (task ^. tTaskList) input ]
+  pure [ scheduleActivity uid (task ^. tActivityType) (task ^. tTaskList) input ]
 
 -- | Cancel failed workflow step.
 --
 canceled :: MonadDecisionCtx c m => m [Decision]
 canceled = do
   traceInfo "canceled" mempty
-  return [ cancelActivity ]
+  pure [ cancelActivity ]
 
 -- | When we run out of events.
 --
@@ -128,7 +128,7 @@ nothing :: MonadDecisionCtx c m => m [Decision]
 nothing = do
   events <- view dcEvents
   traceError "none" [ "events" .= (textShow . view heEventType <$> events) ]
-  return mempty
+  pure mempty
 
 -- | Schedule decision based on history events.
 --
