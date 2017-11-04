@@ -14,9 +14,9 @@ module Network.AWS.Loup.Prelude
 import Control.Concurrent.Async.Lifted
 import Control.Monad.Trans.AWS
 import Data.Aeson
-import Data.ByteString.Lazy            hiding (map)
+import Data.ByteString.Lazy
 import Data.Conduit
-import Data.Conduit.List               hiding (map)
+import Data.Conduit.List
 import Preamble                        as Exports
 
 -- | Encode JSON to Text.
